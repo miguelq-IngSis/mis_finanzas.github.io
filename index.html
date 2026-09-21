@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0B0F19">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <title>FinanFlow Pro | Gestor Financiero & Proyección de Pagos</title>
+  <meta name="description" content="Aplicación de gestión de ingresos mensuales, control de pagos y simulación de proyecciones financieras en tiempo real.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- CSS Principal -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Chart.js & Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- App Wrapper -->
+  <div id="app" class="app-container">
+    
+    <!-- Header Navbar -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-wallet"></i>
+        </div>
+        <div class="brand-text">
+          <h1>FinanFlow <span>Pro</span></h1>
+          <p class="tagline">Control Financiero & Proyecciones</p>
+        </div>
+      </div>
+
+      <!-- Month Selector Controls -->
+      <div class="month-selector-bar">
+        <button id="prev-month-btn" class="btn-icon" title="Mes Anterior">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <div class="month-display" id="current-month-display">
+          <i class="fa-regular fa-calendar-days"></i>
+          <span id="month-year-text">Cargando...</span>
+        </div>
+        <button id="next-month-btn" class="btn-icon" title="Mes Siguiente">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Actions & Utilities -->
+      <div class="nav-actions">
+        <button id="install-app-btn" class="btn btn-outline-sm hidden" title="Instalar aplicación">
+          <i class="fa-solid fa-mobile-screen-button"></i> Instalar
+        </button>
+        <select id="currency-select" class="currency-dropdown" title="Seleccionar Moneda">
+          <option value="USD">$ USD</option>
+          <option value="COP">$ COP</option>
+          <option value="EUR">€ EUR</option>
+          <option value="MXN">$ MXN</option>
+          <option value="ARS">$ ARS</option>
+          <option value="CLP">$ CLP</option>
+          <option value="PEN">S/ PEN</option>
+        </select>
+
+        <button id="demo-data-btn" class="btn btn-outline-sm" title="Cargar Datos de Prueba">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Demo
+        </button>
+
+        <button id="export-import-btn" class="btn btn-outline-sm" title="Respaldos">
+          <i class="fa-solid fa-download"></i> Datos
+        </button>
+
+        <button id="theme-toggle-btn" class="btn-icon theme-btn" title="Cambiar Tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top KPI Summary Grid -->
+    <section class="kpi-grid">
+      <!-- Ingresos -->
+      <div class="kpi-card income-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Ingresos del Mes</span>
+          <div class="kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-income-value">$0.00</div>
+        <div class="kpi-footer">
+          <span class="kpi-subtext" id="kpi-income-subtext">0 fuentes registradas</span>
+          <button id="edit-income-btn" class="btn-link"><i class="fa-solid fa-pen-to-square"></i> Ajustar Ingreso</button>
+        </div>
+      </div>
+
+      <!-- Pagos Realizados -->
+      <div class="kpi-card paid-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Pagos Realizados</span>
+          <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-paid-value">$0.00</div>
+        <div class="kpi-footer">
+          <span class="kpi-subtext" id="kpi-paid-subtext">0 de 0 pagos cubiertos</span>
+        </div>
+      </div>
+
+      <!-- Pagos Pendientes -->
+      <div class="kpi-card pending-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Pagos Pendientes</span>
+          <div class="kpi-icon"><i class="fa-solid fa-clock-history"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-pending-value">$0.00</div>
+        <div class="kpi-footer">
+          <span class="kpi-subtext" id="kpi-pending-subtext">0 compromisos por pagar</span>
+        </div>
+      </div>
+
+      <!-- Saldo General Disponible -->
+      <div class="kpi-card balance-card" id="balance-card-container">
+        <div class="kpi-header">
+          <span class="kpi-title">Saldo General Disponible</span>
+          <div class="kpi-icon" id="balance-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-balance-value">$0.00</div>
+        <div class="budget-progress-bar">
+          <div class="budget-progress-fill" id="budget-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="kpi-footer">
+          <span class="kpi-subtext" id="kpi-balance-subtext">Disponible después de todos los pagos</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="main-tabs">
+      <button class="tab-btn active" data-tab="payments">
+        <i class="fa-solid fa-receipt"></i> Registros de Pagos
+      </button>
+      <button class="tab-btn highlight-tab" data-tab="projections">
+        <i class="fa-solid fa-chart-line"></i> Proyección y Simulador de Pagos
+      </button>
+      <button class="tab-btn" data-tab="analytics">
+        <i class="fa-solid fa-chart-pie"></i> Análisis y Gráficos
+      </button>
+    </nav>
+
+    <!-- TAB 1: REGISTRO DE PAGOS Y GASTOS -->
+    <main id="tab-payments" class="tab-content active">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2>Detalle de Pagos del Mes</h2>
+          <p class="panel-subtitle">Agrega, edita y marca como pagados los compromisos de tu presupuesto.</p>
+        </div>
+        <button id="add-payment-btn" class="btn btn-primary">
+          <i class="fa-solid fa-plus"></i> Registrar Nuevo Pago
+        </button>
+      </div>
+
+      <!-- Filter Controls Bar -->
+      <div class="filter-bar">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="search-payment-input" placeholder="Buscar por concepto o notas...">
+        </div>
+        <div class="filter-group">
+          <select id="filter-category-select">
+            <option value="ALL">Todas las Categorías</option>
+            <option value="Vivienda">Vivienda</option>
+            <option value="Servicios">Servicios Básicos</option>
+            <option value="Alimentación">Alimentación</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Deudas">Deudas y Créditos</option>
+            <option value="Entretenimiento">Entretenimiento</option>
+            <option value="Salud">Salud y Bienestar</option>
+            <option value="Ahorro">Ahorro e Inversión</option>
+            <option value="Otros">Otros</option>
+          </select>
+
+          <select id="filter-status-select">
+            <option value="ALL">Todos los Estados</option>
+            <option value="PAID">Solo Pagados</option>
+            <option value="PENDING">Solo Pendientes</option>
+          </select>
+
+          <select id="sort-payment-select">
+            <option value="date-desc">Fecha (Recientes primero)</option>
+            <option value="date-asc">Fecha (Antiguos primero)</option>
+            <option value="amount-desc">Monto (Mayor a menor)</option>
+            <option value="amount-asc">Monto (Menor a mayor)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Payments Table Container -->
+      <div class="table-responsive">
+        <table class="payments-table">
+          <thead>
+            <tr>
+              <th>Concepto / Detalle</th>
+              <th>Categoría</th>
+              <th>Fecha de Pago</th>
+              <th>Método</th>
+              <th>Valor</th>
+              <th>Estado</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="payments-tbody">
+            <!-- Dynamic Rows rendered via JS -->
+          </tbody>
+        </table>
+        
+        <div id="empty-payments-state" class="empty-state hidden">
+          <div class="empty-icon"><i class="fa-solid fa-receipt"></i></div>
+          <h3>No hay pagos registrados para este mes</h3>
+          <p>Haz clic en "Registrar Nuevo Pago" o prueba los datos de demostración.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: PROYECCION Y SIMULADOR DE PAGOS -->
+    <main id="tab-projections" class="tab-content">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Simulador de Proyecciones de Pago</h2>
+          <p class="panel-subtitle">Proyecta compras o pagos futuros antes de aplicarlos. Evalúa la liquidez de tu saldo general antes de confirmar.</p>
+        </div>
+      </div>
+
+      <div class="projection-workspace">
+        
+        <!-- Left Column: Add & List Projections -->
+        <div class="projection-left-col">
+          <div class="glass-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-square-plus"></i> Nueva Proyección de Pago</h3>
+            </div>
+            <form id="projection-form" class="app-form">
+              <div class="form-group">
+                <label for="proj-concept">Concepto de la Proyección *</label>
+                <input type="text" id="proj-concept" placeholder="Ej: Compra de Computador, Viaje, Reparación" required>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group col-6">
+                  <label for="proj-amount">Monto Proyectado *</label>
+                  <div class="input-prefix">
+                    <span class="currency-symbol">$</span>
+                    <input type="number" id="proj-amount" min="0.01" step="0.01" placeholder="0.00" required>
+                  </div>
+                </div>
+
+                <div class="form-group col-6">
+                  <label for="proj-category">Categoría</label>
+                  <select id="proj-category">
+                    <option value="Vivienda">Vivienda</option>
+                    <option value="Servicios">Servicios Básicos</option>
+                    <option value="Alimentación">Alimentación</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Deudas">Deudas y Créditos</option>
+                    <option value="Entretenimiento">Entretenimiento</option>
+                    <option value="Salud">Salud y Bienestar</option>
+                    <option value="Ahorro">Ahorro e Inversión</option>
+                    <option value="Otros" selected>Otros</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group col-6">
+                  <label for="proj-date">Fecha de Impacto</label>
+                  <input type="date" id="proj-date">
+                </div>
+
+                <div class="form-group col-6">
+                  <label for="proj-installments">Cuotas / Parcelado</label>
+                  <select id="proj-installments">
+                    <option value="1">1 pago único (100%)</option>
+                    <option value="2">2 cuotas iguales</option>
+                    <option value="3">3 cuotas iguales</option>
+                    <option value="6">6 cuotas iguales</option>
+                    <option value="12">12 cuotas iguales</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-secondary w-100">
+                <i class="fa-solid fa-plus-circle"></i> Agregar a la Simulación
+              </button>
+            </form>
+          </div>
+
+          <!-- Active Projections List Card -->
+          <div class="glass-card margin-top">
+            <div class="card-header flex-between">
+              <h3><i class="fa-solid fa-list-check"></i> Escenarios Proyectados</h3>
+              <span id="proj-count-badge" class="badge badge-info">0 elementos</span>
+            </div>
+            <p class="small-text">Selecciona o desmarca para incluir/excluir proyecciones en el cálculo:</p>
+
+            <div id="projections-list" class="projections-list">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <div id="empty-projections-state" class="empty-state-sm">
+              <p>No hay pagos proyectados agregados a la simulación.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Impact Analysis Engine & Apply Action -->
+        <div class="projection-right-col">
+          <div class="glass-card impact-card" id="impact-card-container">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-calculator"></i> Resultado de la Proyección de Saldo</h3>
+              <span class="live-indicator"><span class="dot"></span> En Vivo</span>
+            </div>
+
+            <div class="impact-metrics-grid">
+              <div class="metric-item">
+                <span class="metric-label">Saldo Actual Registrado</span>
+                <span class="metric-val" id="sim-current-balance">$0.00</span>
+              </div>
+
+              <div class="metric-item">
+                <span class="metric-label">Monto de Proyecciones</span>
+                <span class="metric-val text-warning" id="sim-projected-cost">-$0.00</span>
+              </div>
+
+              <div class="metric-item highlight">
+                <span class="metric-label">Saldo Proyectado Resultante</span>
+                <span class="metric-val" id="sim-resulting-balance">$0.00</span>
+              </div>
+            </div>
+
+            <!-- Liquidity Status Banner -->
+            <div id="liquidity-banner" class="status-banner banner-success">
+              <div class="banner-icon"><i class="fa-solid fa-circle-check"></i></div>
+              <div class="banner-body">
+                <h4 id="liquidity-title">Proyección Financiera Segura</h4>
+                <p id="liquidity-desc">Tu saldo cubre totalmente los pagos proyectados seleccionados con margen suficiente.</p>
+              </div>
+            </div>
+
+            <!-- Projections Comparison Timeline Chart -->
+            <div class="chart-wrapper-sm margin-top">
+              <canvas id="projectionChart"></canvas>
+            </div>
+
+            <!-- Action Button to Convert Projections to Real Payments -->
+            <div class="apply-action-box">
+              <p class="apply-info">¿Estás conforme con este escenario? Puedes convertir las proyecciones seleccionadas en pagos reales con 1 clic.</p>
+              <button id="apply-projection-btn" class="btn btn-success btn-lg w-100">
+                <i class="fa-solid fa-circle-play"></i> Aplicar Proyección como Pagos Reales
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- TAB 3: ESTADISTICAS Y ANALISIS -->
+    <main id="tab-analytics" class="tab-content">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2>Análisis y Distribución Financiera</h2>
+          <p class="panel-subtitle">Visualiza la distribución de tus gastos y evalúa tendencias presupuestarias.</p>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="glass-card col-6">
+          <h3><i class="fa-solid fa-chart-pie"></i> Gastos por Categoría</h3>
+          <div class="chart-wrapper">
+            <canvas id="categoryPieChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card col-6">
+          <h3><i class="fa-solid fa-chart-column"></i> Ingresos vs Gastos Mensuales</h3>
+          <div class="chart-wrapper">
+            <canvas id="monthlyTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- MODAL: REGISTRAR / EDITAR PAGO -->
+  <div id="payment-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="payment-modal-title">Registrar Nuevo Pago</h3>
+        <button class="modal-close" data-close="payment-modal">&times;</button>
+      </div>
+      <form id="payment-form">
+        <input type="hidden" id="payment-id">
+
+        <div class="form-group">
+          <label for="pay-concept">Concepto / Detalle del Pago *</label>
+          <input type="text" id="pay-concept" placeholder="Ej: Arriendo, Factura Luz, Mercado" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="pay-amount">Valor ($) *</label>
+            <div class="input-prefix">
+              <span class="currency-symbol">$</span>
+              <input type="number" id="pay-amount" min="0.01" step="0.01" placeholder="0.00" required>
+            </div>
+          </div>
+
+          <div class="form-group col-6">
+            <label for="pay-category">Categoría *</label>
+            <select id="pay-category" required>
+              <option value="Vivienda">Vivienda</option>
+              <option value="Servicios">Servicios Básicos</option>
+              <option value="Alimentación">Alimentación</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Deudas">Deudas y Créditos</option>
+              <option value="Entretenimiento">Entretenimiento</option>
+              <option value="Salud">Salud y Bienestar</option>
+              <option value="Ahorro">Ahorro e Inversión</option>
+              <option value="Otros" selected>Otros</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="pay-date">Fecha de Pago</label>
+            <input type="date" id="pay-date" required>
+          </div>
+
+          <div class="form-group col-6">
+            <label for="pay-method">Método de Pago</label>
+            <select id="pay-method">
+              <option value="Transferencia">Transferencia Bancaria</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+              <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+              <option value="Debito Automático">Débito Automático</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pay-status">Estado del Pago</label>
+          <div class="radio-toggle-group">
+            <label class="radio-label">
+              <input type="radio" name="pay-status" value="PENDING" checked>
+              <span class="radio-btn-custom pending-btn"><i class="fa-solid fa-clock"></i> Pendiente</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="pay-status" value="PAID">
+              <span class="radio-btn-custom paid-btn"><i class="fa-solid fa-check-circle"></i> Pagado</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pay-notes">Notas Opcionales</label>
+          <textarea id="pay-notes" rows="2" placeholder="Detalles o referencia de pago..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close="payment-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar Pago</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: AJUSTAR INGRESO MENSUAL -->
+  <div id="income-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Ajustar Ingresos del Mes</h3>
+        <button class="modal-close" data-close="income-modal">&times;</button>
+      </div>
+      <form id="income-form">
+        <div class="form-group">
+          <label for="income-base">Ingreso Principal / Salario *</label>
+          <div class="input-prefix">
+            <span class="currency-symbol">$</span>
+            <input type="number" id="income-base" min="0" step="0.01" placeholder="0.00" required>
+          </div>
+        </div>
+
+        <div class="form-group margin-top-sm">
+          <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+            <input type="checkbox" id="income-next-month-fund" style="width: auto; margin-top: 3px; accent-color: var(--primary);">
+            <span><strong>Pago de Fin de Mes:</strong> Este ingreso fue cobrado al finalizar el mes (ej: día 30/31) y cubrirá los gastos del mes siguiente.</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Ingresos Adicionales o Extras</label>
+          <div id="extra-incomes-container">
+            <!-- Dynamic extra income rows -->
+          </div>
+          <button type="button" id="add-extra-income-btn" class="btn btn-outline-sm margin-top-sm">
+            <i class="fa-solid fa-plus"></i> Agregar Ingreso Extra
+          </button>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close="income-modal">Cancelar</button>
+          <button type="submit" class="btn btn-success"><i class="fa-solid fa-check"></i> Actualizar Ingreso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: RESPALDOS Y EXPORTACION -->
+  <div id="data-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Gestión de Datos y Copias de Seguridad</h3>
+        <button class="modal-close" data-close="data-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Puedes exportar tu información registrada o restaurar una copia previa en formato JSON/CSV.</p>
+        <div class="data-actions-grid margin-top">
+          <button id="export-json-btn" class="btn btn-primary">
+            <i class="fa-solid fa-file-code"></i> Exportar Copia de Seguridad (JSON)
+          </button>
+          <button id="export-csv-btn" class="btn btn-secondary">
+            <i class="fa-solid fa-file-csv"></i> Exportar Pagos a CSV / Excel
+          </button>
+          <label class="btn btn-outline cursor-pointer">
+            <i class="fa-solid fa-file-import"></i> Importar Archivo JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="install-help-modal" class="modal-backdrop hidden">
+    <div class="modal-box modal-box-small">
+      <div class="modal-header">
+        <h3>Instalar FinanFlow</h3>
+        <button class="modal-close" data-close="install-help-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>En tu celular abre el menú del navegador y selecciona <strong>“Instalar aplicación”</strong> o <strong>“Agregar a pantalla de inicio”</strong>. Luego podrás abrir FinanFlow como una app, incluso sin conexión.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Modules -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
